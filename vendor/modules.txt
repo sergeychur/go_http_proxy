@@ -1,0 +1,8 @@
+# github.com/kabukky/httpscerts v0.0.0-20150320125433-617593d7dcb3
+github.com/kabukky/httpscerts
+# github.com/lib/pq v1.2.0
+github.com/lib/pq
+github.com/lib/pq/oid
+github.com/lib/pq/scram
+# gopkg.in/jackc/pgx.v2 v2.11.0
+gopkg.in/jackc/pgx.v2

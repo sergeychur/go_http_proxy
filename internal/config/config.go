@@ -11,11 +11,11 @@ type Config struct {
 	HttpsPort string `json:"https_port"`
 	CertificatePath string `json:"cert"`
 	KeyPath string `json:"key"`
-	//DBHost string `json:"dbhost"`
-	//DBPort string `json:"dbport"`
-	//DBUser string `json:"dbuser"`
-	//DBPass string `json:"dbpassword"`
-	//DBName string `json:"dbname"`
+	DBHost string `json:"dbhost"`
+	DBPort string `json:"dbport"`
+	DBUser string `json:"dbuser"`
+	DBPass string `json:"dbpassword"`
+	DBName string `json:"dbname"`
 }
 
 func NewConfig(pathToConfig string) (*Config, error) {

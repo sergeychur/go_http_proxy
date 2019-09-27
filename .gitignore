@@ -13,3 +13,11 @@
 
 # Project data
 .idea*
+
+# certificate
+*.cert
+*.pem
+
+
+# go.sum
+go.sum

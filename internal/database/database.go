@@ -2,9 +2,17 @@ package database
 
 import (
 	_ "github.com/lib/pq"
+	"github.com/sergeychur/go_http_proxy/internal/models"
 	"gopkg.in/jackc/pgx.v2"
 	"time"
+)
 
+const (
+	saveRequest = "INSERT INTO requests(is_https, data) VALUES($1, $2) RETURNING req_id;"
+	selectRequest = "SELECT * FROM requests WHERE req_id = $1;"
+	pageRequests = "SELECT req.* FROM requests req " +
+		"JOIN ( SELECT req_id FROM requests req ORDER BY req_id " +
+		"LIMIT $1 OFFSET $2) sub_q ON (req.req_id = sub_q.req_id) ORDER BY req_id;"
 )
 
 type DB struct {
@@ -58,19 +66,34 @@ func (db *DB) StartTransaction() (*pgx.Tx, error) {
 	return db.db.Begin()
 }
 
-
-func (db *DB) SaveRequest() error {
-	return nil
+func (db *DB) SaveRequest(request *models.Request) (int, error) {
+	row := db.db.QueryRow(saveRequest, request.IsHTTPS, request.Data)
+	id := 0
+	err := row.Scan(&id)
+	return id, err
 }
 
-func (db *DB) SaveResponse() error {
-	return nil
+func (db *DB) GetRequest(reqId int) (*models.Request, error) {
+	row := db.db.QueryRow(selectRequest, reqId)
+	req := new(models.Request)
+	err := row.Scan(&req)
+	return req, err
 }
 
-func (db *DB) GetRequest() {
-
-}
-
-func (db *DB) GetResponse() {
-
+func (db *DB) GetRequests(offset int, limit int) (models.Requests, error) {
+	rows, err := db.db.Query(pageRequests, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	requests := make(models.Requests, 0)
+	defer rows.Close()
+	for rows.Next() {
+		req := new(models.Request)
+		err := rows.Scan(&req.Id, &req.IsHTTPS, &req.Data)
+		if err != nil {
+			return nil, err
+		}
+		requests = append(requests, req)
+	}
+	return requests, nil
 }

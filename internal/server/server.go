@@ -6,10 +6,13 @@ import (
 	"github.com/kabukky/httpscerts"
 	"github.com/sergeychur/go_http_proxy/internal/config"
 	"github.com/sergeychur/go_http_proxy/internal/database"
+	"github.com/sergeychur/go_http_proxy/internal/models"
 	"io"
 	"log"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"strconv"
 	"time"
 )
 
@@ -27,7 +30,9 @@ func NewServer(pathToConfig string)  (*Server, error) {
 	}
 	server := new(Server)
 	server.config = newConfig
-
+	dbPort, err := strconv.Atoi(server.config.DBPort)
+	server.db = database.NewDB(server.config.DBUser, server.config.DBPass, server.config.DBName,
+		server.config.DBHost, uint16(dbPort))
 	err = httpscerts.Check(server.config.CertificatePath, server.config.KeyPath)
 	if err != nil {
 		err = httpscerts.Generate(server.config.CertificatePath,
@@ -39,7 +44,10 @@ func NewServer(pathToConfig string)  (*Server, error) {
 	}
 	server.httpHandler = new(http.Server)
 	server.httpHandler.Addr = fmt.Sprintf(":%s", server.config.HttpPort)
-	server.httpHandler.Handler = http.HandlerFunc(server.ManageHttpRequest)
+	function :=  func(w http.ResponseWriter, r *http.Request) {
+		server.ManageHttpRequest(w, r, false)
+	}
+	server.httpHandler.Handler = http.HandlerFunc(function)
 	server.httpHandler.ReadTimeout = 5 * time.Second
 	server.httpHandler.WriteTimeout = 5 * time.Second
 
@@ -64,13 +72,13 @@ func NewServer(pathToConfig string)  (*Server, error) {
 func (server *Server) Run() error {
 
 	go func() {
-		log.Printf("running https on port %s\n", server.httpsHandler.Addr)
+		//log.Printf("running https on port %s\n", server.httpsHandler.Addr)
 		err := server.httpsHandler.ListenAndServe()
 		if err != nil {
 			panic(err)
 		}
 	}()
-	log.Printf("running http on port %s\n", server.httpHandler.Addr)
+	//log.Printf("running http on port %s\n", server.httpHandler.Addr)
 	err :=server.httpHandler.ListenAndServe()
 	if err != nil {
 		return err
@@ -78,11 +86,11 @@ func (server *Server) Run() error {
 	return nil
 }
 
-func (server *Server) ManageHttpRequest(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.Header)
+func (server *Server) ManageHttpRequest(w http.ResponseWriter, r *http.Request, isHTTPS bool) {
+	//log.Println(r.Header)
 	response, err := http.DefaultTransport.RoundTrip(r)
 	if err != nil {
-		log.Println(err)
+		//log.Printf("round trip error: %s", err)
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 		return
 	}
@@ -98,46 +106,66 @@ func (server *Server) ManageHttpRequest(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 	}
+	buf, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		//log.Printf("Request wasn't saved: %s", err)
+	}
+	req := &models.Request{
+		Data: buf,
+		IsHTTPS: isHTTPS,
+	}
+	_, err = server.db.SaveRequest(req)
+	if err != nil {
+		log.Printf("Request wasn't saved: %s", err)
+	}
+
+
 }
 
 func (server *Server) LaunchSecureConnection(w http.ResponseWriter, r *http.Request) {
-	serv_conn, err := net.DialTimeout("tcp", r.Host, 15 * time.Second)
+	//req, err := httputil.DumpRequest(r, true)
+	servConn, err := net.DialTimeout("tcp", r.Host, 15 * time.Second)
 	if err != nil {
-		log.Println(err)
+		//log.Println(err)
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 	}
 	w.WriteHeader(http.StatusOK)
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
-		log.Println("Hijacking not supported")
+		//log.Println("Hijacking not supported")
 		http.Error(w, "Hijacking not supported", http.StatusInternalServerError)
 		return
 	}
-	client_conn, _, err := hijacker.Hijack()
+	clientConn, _, err := hijacker.Hijack()
 	if err != nil {
-		log.Println(err)
+		//log.Printf("highjack error: %s", err)
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 	}
 
 	f := func(dst io.WriteCloser, src io.ReadCloser) {
-		defer func() {
-			_ = dst.Close()
-			_ = src.Close()
-		}()
-		_, err := io.Copy(dst, src)
-		if err != nil {
-			log.Println(err)
+		if src != nil && dst != nil {
+			defer func() {
+				_ = dst.Close()
+			}()
+			defer func() {
+				_ = src.Close()
+			}()
+
+			_, err := io.Copy(dst, src)
+			if err != nil {
+				//log.Printf("copy error %s", err)
+			}
 		}
 	}
 
-	go f(serv_conn, client_conn)
-	go f(client_conn, serv_conn)
+	go f(servConn, clientConn)
+	go f(clientConn, servConn)
 }
 
 func (server *Server) ManageHttpsRequest(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodConnect {
 		server.LaunchSecureConnection(w, r)
 	} else {
-		server.ManageHttpRequest(w, r)
+		server.ManageHttpRequest(w, r, true)
 	}
 }

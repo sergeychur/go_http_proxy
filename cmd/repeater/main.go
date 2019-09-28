@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/sergeychur/go_http_proxy/internal/proxy"
+	"github.com/sergeychur/go_http_proxy/internal/repeater"
 	"log"
 	"os"
 )
@@ -13,7 +13,7 @@ func main() {
 	} else {
 		pathToConfig = os.Args[1]
 	}
-	serv, err := proxy.NewServer(pathToConfig)
+	serv, err := repeater.NewServer(pathToConfig)
 	if err != nil {
 		panic(err)
 	}

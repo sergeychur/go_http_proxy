@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	saveRequest = "INSERT INTO requests(is_https, data) VALUES($1, $2) RETURNING req_id;"
+	saveRequest   = "INSERT INTO requests(is_https, data) VALUES($1, $2) RETURNING req_id;"
 	selectRequest = "SELECT * FROM requests WHERE req_id = $1;"
-	pageRequests = "SELECT req.* FROM requests req " +
+	pageRequests  = "SELECT req.* FROM requests req " +
 		"JOIN ( SELECT req_id FROM requests req ORDER BY req_id " +
 		"LIMIT $1 OFFSET $2) sub_q ON (req.req_id = sub_q.req_id) ORDER BY req_id;"
 )
@@ -23,7 +23,6 @@ type DB struct {
 	host         string
 	port         uint16
 }
-
 
 func NewDB(user string, password string, dataBaseName string,
 	host string, port uint16) *DB {
@@ -56,7 +55,6 @@ func (db *DB) Start() error {
 	db.db = dataBase
 	return nil
 }
-
 
 func (db *DB) Close() {
 	db.db.Close()

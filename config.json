@@ -1,7 +1,0 @@
-{
-  "host": "localhost",
-  "http_port": "8191",
-  "https_port": "8192",
-  "cert": "cert.pem",
-  "key": "key.pem"
-}

@@ -15,6 +15,7 @@
 .idea*
 
 # certificate
+*.crt
 *.cert
 *.pem
 

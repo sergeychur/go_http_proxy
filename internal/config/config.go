@@ -7,15 +7,13 @@ import (
 
 type Config struct {
 	Host string `json:"host"`
-	HttpPort   string `json:"http_port"`
-	HttpsPort string `json:"https_port"`
-	CertificatePath string `json:"cert"`
-	KeyPath string `json:"key"`
-	DBHost string `json:"dbhost"`
-	DBPort string `json:"dbport"`
-	DBUser string `json:"dbuser"`
-	DBPass string `json:"dbpassword"`
-	DBName string `json:"dbname"`
+	HttpsPort       string `json:"https_port, omitempty"`
+	RepeaterPort    string `json:"repeater_port, omitempty"`
+	DBHost          string `json:"dbhost"`
+	DBPort          string `json:"dbport"`
+	DBUser          string `json:"dbuser"`
+	DBPass          string `json:"dbpassword"`
+	DBName          string `json:"dbname"`
 }
 
 func NewConfig(pathToConfig string) (*Config, error) {

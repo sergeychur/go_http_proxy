@@ -1,7 +1,9 @@
 package proxy
 
 import (
+	"bytes"
 	"crypto/tls"
+	"fmt"
 	"github.com/sergeychur/go_http_proxy/internal/certificates"
 	"github.com/sergeychur/go_http_proxy/internal/config"
 	"github.com/sergeychur/go_http_proxy/internal/database"
@@ -11,6 +13,11 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"strconv"
+	"time"
+)
+
+const (
+	OKHeader = "HTTP/1.1 200 OK\r\n\r\n"
 )
 
 type Server struct {
@@ -42,6 +49,7 @@ func NewServer(pathToConfig string) (*Server, error) {
 	}
 
 	server.httpClient = new(http.Client)
+	server.httpClient.Timeout = 5 * time.Second
 	return server, nil
 }
 
@@ -56,7 +64,10 @@ func (server *Server) Run() error {
 
 func (server *Server) ManageHttpRequest(w http.ResponseWriter, r *http.Request) {
 	//log.Println(r.Header)
-	server.saveRequest(r, false)
+	requestToSave, err := httputil.DumpRequest(r, true)
+	if err == nil {
+		server.saveRequest(requestToSave, false)
+	}
 	response, err := http.DefaultTransport.RoundTrip(r)
 	if err != nil {
 		//log.Printf("round trip error: %s", err)
@@ -103,11 +114,11 @@ func (server *Server) LaunchSecureConnection(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	conn, _, err := hijacker.Hijack()
-	if err != nil {
+	if err != nil{
 		//log.Println(err)
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 	}
-	_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+	_, err = conn.Write([]byte(OKHeader))
 	if err != nil {
 		_ = conn.Close()
 		return
@@ -121,7 +132,7 @@ func (server *Server) LaunchSecureConnection(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	f := func(dst io.WriteCloser, src io.ReadCloser) {
+	f := func(dst io.WriteCloser, src io.ReadCloser, isSaved bool) {
 		if src != nil && dst != nil {
 			defer func() {
 				_ = dst.Close()
@@ -129,15 +140,22 @@ func (server *Server) LaunchSecureConnection(w http.ResponseWriter, r *http.Requ
 			defer func() {
 				_ = src.Close()
 			}()
-			_, err := io.Copy(dst, src)
+			buf := new(bytes.Buffer)
+			multiWriter := io.MultiWriter(dst, buf)
+			_, err = io.Copy(multiWriter, src)
 			if err != nil {
-				//log.Printf("copy error %s", err)
+				log.Println(err)
+				return
+			}
+			if isSaved {
+				fmt.Println(string(buf.Bytes()))
+				server.saveRequest(buf.Bytes(), true)
 			}
 		}
 	}
 
-	go f(serverConn, clientConn)
-	go f(clientConn, serverConn)
+	go f(serverConn, clientConn, true)
+	go f(clientConn, serverConn, false)
 }
 
 func (server *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -148,18 +166,13 @@ func (server *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (server *Server) saveRequest(r *http.Request, isHTTPS bool) {
-	buf, err := httputil.DumpRequest(r, true)
-	if err != nil {
-		log.Println(string(buf))
-		log.Printf("Request wasn't saved: %s", err)
-		return
-	}
+func (server *Server) saveRequest(request []byte, isHTTPS bool) {
+	//buf, err := httputil.DumpRequest(r, true)
 	req := &models.Request{
-		Data:    buf,
+		Data:    request,
 		IsHTTPS: isHTTPS,
 	}
-	_, err = server.db.SaveRequest(req)
+	_, err := server.db.SaveRequest(req)
 	if err != nil {
 		log.Printf("Request wasn't saved: %s", err)
 	}

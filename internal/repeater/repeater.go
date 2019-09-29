@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/sergeychur/go_http_proxy/internal/models"
 	"github.com/sergeychur/go_http_proxy/internal/request_handle"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
@@ -41,7 +42,17 @@ func (server *Server) makeHTTPSRequest(request *models.RequestJSON, w http.Respo
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 		return
 	}
-	err = resp.Write(w)
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+	binary, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err)
+	}
+	for key, values := range resp.Header {
+		w.Header().Set(key, strings.Join(values, ", "))
+	}
+	_, err = w.Write(binary)
 	if err != nil {
 		log.Println(err)
 	}
@@ -59,10 +70,19 @@ func (server *Server) makeHTTPRequest(request *models.RequestJSON, w http.Respon
 		return
 	}
 	if response != nil {
-		err := response.Write(w)
+		defer func() {
+			_ = response.Body.Close()
+		}()
+		binary, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusServiceUnavailable)
-			return
+			log.Println(err)
+		}
+		for key, values := range response.Header {
+			w.Header().Set(key, strings.Join(values, ", "))
+		}
+		_, err = w.Write(binary)
+		if err != nil {
+			log.Println(err)
 		}
 	}
 

@@ -36,6 +36,13 @@ func NewServer(pathToConfig string) (*Server, error) {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
+
+	// golang templates usage
+	router.Get("/", server.GetIndexTemplate)
+	router.Get("/repeat/{id:^[0-9]+$}", server.RepeatRequest)
+	router.Get("/change/{id:^[0-9]+$}", server.ChangeRequestTemplate)
+
+	// rest api, later maybe do contemporary frontend(no)
 	subRouter := chi.NewRouter()
 	subRouter.Get("/history", server.GetHistory)
 	subRouter.Get("/request/{id:^[0-9]+$}", server.GetRequest)

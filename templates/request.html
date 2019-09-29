@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Request Details</title>
+    <style type="text/css">
+        table {
+            width: 300px; /* Ширина таблицы */
+            border-top: 2px solid #000; /* Линия сверху таблицы */
+        }
+        td, th {
+            padding: 3px; /* Поля вокруг содержимого ячеек */
+            border-bottom: 2px solid #000; /* Линия внизу таблицы */
+        }
+        th {
+            text-align: left; /* Выравнивание текста по левому краю */
+            border-bottom: 1px solid #000; /* Линия под верхним заголовком */
+        }
+    </style>
+</head>
+<body>
+    <table style="width: 100%">
+        <thead>
+        <tr>
+            <td>ID</td>
+            <td>HTTPS</td>
+            <td>Path</td>
+        </tr>
+        </thead>
+        <tr>
+            <td>{{.Request.ID}}</td>
+            <td>{{.Request.IsHTTPS}}</td>
+            <td>{{.Request.Path}}</td>
+        </tr>
+    </table>
+    <table  style="width: 100%">
+        <thead>
+        <tr>
+            <td>Key</td>
+            <td>Value</td>
+        </tr>
+        </thead>
+        <tr>
+            <td>Method</td>
+            <td><textarea id="method">{{.Request.Req.Method}}</textarea></td>
+        </tr>
+        <tr>
+            <td>URL</td>
+            <td><textarea cols="30" rows="30" id="url">{{.Request.Req.URL}}</textarea></td>
+        </tr>
+        <tr>
+            <td>Proto</td>
+            <td><textarea id="proto">{{.Request.Req.Proto}}</textarea></td>
+        </tr>
+        <tr>
+            <td>Proto Major</td>
+            <td><textarea id="proto_major">{{.Request.Req.ProtoMajor}}</textarea></td>
+        </tr>
+        <tr>
+            <td>Proto Minor</td>
+            <td><textarea id="proto_minor">{{.Request.Req.ProtoMinor}}</textarea></td>
+        </tr>
+        <tr>
+            <td>Host</td>
+            <td><textarea id="host">{{.Request.Req.Host}}</textarea></td>
+        </tr>
+        <!--here should be header and body-->
+        <tr>
+            <td>Content Length</td>
+            <td><textarea id="content_length">{{.Request.Req.ContentLength}}</textarea></td>
+        </tr>
+        <tr>
+            <td>Transfer Encoding</td>
+            <td><textarea id="transfer_encoding">
+                    {{range .Request.Req.TransferEncoding}}
+                        {{.}},
+                    {{end}}
+                </textarea>
+            </td>
+        </tr>
+        <tr>
+            <td>Close</td>
+            <td><textarea id="close">
+                    {{if .Request.Req.Close}}
+                        True
+                    {{else}}
+                        False
+                    {{end}}
+                </textarea>
+            </td>
+        </tr>
+        <tr>
+            <td>Form</td>
+            <td><textarea cols="30" rows="30" id="form">{{.Request.Req.Form}}</textarea></td>
+        </tr>
+        <tr>
+            <td>Post Form</td>
+            <td><textarea cols="30" rows="30" id="post_form">{{.Request.Req.PostForm}}</textarea></td>
+        </tr>
+        <!--here should be multpart form (or no?)-->
+        <!--trailer-->
+        <tr>
+            <td>Remote Addr</td>
+            <td><textarea id="remote_addr">{{.Request.Req.RemoteAddr}}</textarea></td>
+        </tr>
+        <tr>
+            <td>Request URI</td>
+            <td><textarea id="request_uri">{{.Request.Req.RequestURI}}</textarea></td>
+        </tr>
+    </table>
+    <button id="submit" onclick="SendJSON();">
+        Send
+    </button>
+    <script type="application/javascript">
+        function SendJSON() {
+            alert('kek');
+        }
+    </script>
+</body>
+</html>

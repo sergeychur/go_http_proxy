@@ -6,8 +6,6 @@ import (
 )
 
 type Request struct {
-	//IsHTTPS bool   `json:"is_https"`
-
 	Method           string          `json:"method"`
 	URL              string          `json:"path"`
 	Proto            string          `json:"proto"`

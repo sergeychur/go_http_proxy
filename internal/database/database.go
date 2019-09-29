@@ -1,6 +1,7 @@
 package database
 
 import (
+	"encoding/json"
 	_ "github.com/lib/pq"
 	"github.com/sergeychur/go_http_proxy/internal/models"
 	"gopkg.in/jackc/pgx.v2"
@@ -8,7 +9,7 @@ import (
 )
 
 const (
-	saveRequest   = "INSERT INTO requests(is_https, data) VALUES($1, $2) RETURNING req_id;"
+	saveRequest   = "INSERT INTO requests(url, is_https, data) VALUES($1, $2, $3) RETURNING req_id;"
 	selectRequest = "SELECT * FROM requests WHERE req_id = $1;"
 	pageRequests  = "SELECT req.* FROM requests req " +
 		"JOIN ( SELECT req_id FROM requests req ORDER BY req_id " +
@@ -64,30 +65,57 @@ func (db *DB) StartTransaction() (*pgx.Tx, error) {
 	return db.db.Begin()
 }
 
-func (db *DB) SaveRequest(request *models.Request) (int, error) {
-	row := db.db.QueryRow(saveRequest, request.IsHTTPS, request.Data)
+func (db *DB) SaveRequest(request *models.RequestJSON) (int, error) {
+	rawRequest, err := json.Marshal(request.Req)
+	if err != nil {
+		return 0, err
+	}
+	row := db.db.QueryRow(saveRequest, request.Path, request.IsHTTPS, rawRequest)
 	id := 0
-	err := row.Scan(&id)
+	err = row.Scan(&id)
 	return id, err
 }
 
-func (db *DB) GetRequest(reqId int) (*models.Request, error) {
+func (db *DB) GetRequest(reqId int) (*models.RequestJSON, error) {
 	row := db.db.QueryRow(selectRequest, reqId)
-	req := new(models.Request)
-	err := row.Scan(&req)
-	return req, err
+	req := new(models.RequestJSON)
+	bytesReq := make([]byte, 0)
+	err := row.Scan(&req.ID, &req.Path, &req.IsHTTPS, &bytesReq)
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(bytesReq, &req.Req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 func (db *DB) GetRequests(offset int, limit int) (models.Requests, error) {
 	rows, err := db.db.Query(pageRequests, limit, offset)
+	if err == pgx.ErrNoRows {
+		requests := make(models.Requests, 0)
+		return requests, nil
+	}
 	if err != nil {
 		return nil, err
 	}
 	requests := make(models.Requests, 0)
 	defer rows.Close()
 	for rows.Next() {
-		req := new(models.Request)
-		err := rows.Scan(&req.Id, &req.IsHTTPS, &req.Data)
+		req := new(models.RequestJSON)
+		bytesReq := make([]byte, 0)
+		err := rows.Scan(&req.ID, &req.Path, &req.IsHTTPS, &bytesReq)
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal(bytesReq, &req.Req)
 		if err != nil {
 			return nil, err
 		}

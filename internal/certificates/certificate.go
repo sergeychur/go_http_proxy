@@ -38,9 +38,9 @@ func GenerateCA(name string) (certPEM, keyPEM []byte, err error) {
 		NotAfter:              now.Add(caMaxAge),
 		KeyUsage:              caUsage,
 		BasicConstraintsValid: true,
-		IsCA:               true,
-		MaxPathLen:         2,
-		SignatureAlgorithm: x509.ECDSAWithSHA512,
+		IsCA:                  true,
+		MaxPathLen:            2,
+		SignatureAlgorithm:    x509.ECDSAWithSHA512,
 	}
 	key, err := genKeyPair()
 	if err != nil {

@@ -3,15 +3,14 @@ package proxy
 import (
 	"bytes"
 	"crypto/tls"
-	"fmt"
 	"github.com/sergeychur/go_http_proxy/internal/certificates"
 	"github.com/sergeychur/go_http_proxy/internal/config"
 	"github.com/sergeychur/go_http_proxy/internal/database"
 	"github.com/sergeychur/go_http_proxy/internal/models"
+	"github.com/sergeychur/go_http_proxy/internal/request_handle"
 	"io"
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"strconv"
 	"time"
 )
@@ -21,10 +20,10 @@ const (
 )
 
 type Server struct {
-	ca tls.Certificate
+	ca         tls.Certificate
 	httpClient *http.Client
-	db           *database.DB
-	config       *config.Config
+	db         *database.DB
+	config     *config.Config
 }
 
 func NewServer(pathToConfig string) (*Server, error) {
@@ -39,10 +38,6 @@ func NewServer(pathToConfig string) (*Server, error) {
 	dbPort, err := strconv.Atoi(server.config.DBPort)
 	server.db = database.NewDB(server.config.DBUser, server.config.DBPass, server.config.DBName,
 		server.config.DBHost, uint16(dbPort))
-	err = server.db.Start()
-	if err != nil {
-		return nil, err
-	}
 	server.ca, err = certificates.LoadCA()
 	if err != nil {
 		return nil, err
@@ -54,8 +49,13 @@ func NewServer(pathToConfig string) (*Server, error) {
 }
 
 func (server *Server) Run() error {
-	//log.Printf("running https on port %s\n", proxy.httpsHandler.Addr)
-	err := http.ListenAndServe(":" + server.config.HttpsPort, server)
+	log.Printf("running https on port %s\n", server.config.HttpsPort)
+	err := server.db.Start()
+	if err != nil {
+		return err
+	}
+	defer server.db.Close()
+	err = http.ListenAndServe(":"+server.config.HttpsPort, server)
 	if err != nil {
 		panic(err)
 	}
@@ -64,10 +64,7 @@ func (server *Server) Run() error {
 
 func (server *Server) ManageHttpRequest(w http.ResponseWriter, r *http.Request) {
 	//log.Println(r.Header)
-	requestToSave, err := httputil.DumpRequest(r, true)
-	if err == nil {
-		server.saveRequest(requestToSave, false)
-	}
+	server.saveRequest(r, false)
 	response, err := http.DefaultTransport.RoundTrip(r)
 	if err != nil {
 		//log.Printf("round trip error: %s", err)
@@ -114,7 +111,7 @@ func (server *Server) LaunchSecureConnection(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	conn, _, err := hijacker.Hijack()
-	if err != nil{
+	if err != nil {
 		//log.Println(err)
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 	}
@@ -144,12 +141,12 @@ func (server *Server) LaunchSecureConnection(w http.ResponseWriter, r *http.Requ
 			multiWriter := io.MultiWriter(dst, buf)
 			_, err = io.Copy(multiWriter, src)
 			if err != nil {
-				log.Println(err)
+				//log.Println(err)
 				return
 			}
 			if isSaved {
-				fmt.Println(string(buf.Bytes()))
-				server.saveRequest(buf.Bytes(), true)
+				//fmt.Println(string(buf.Bytes()))
+				server.saveRawRequest(buf.Bytes(), true)
 			}
 		}
 	}
@@ -166,13 +163,38 @@ func (server *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (server *Server) saveRequest(request []byte, isHTTPS bool) {
-	//buf, err := httputil.DumpRequest(r, true)
-	req := &models.Request{
-		Data:    request,
+func (server *Server) saveRequest(request *http.Request, isHTTPS bool) {
+	model, err := request_handle.ConvertRequestToModel(request, isHTTPS)
+	if err != nil {
+		log.Printf("Request wasn't saved: %s", err)
+		return
+	}
+
+	modelToSave := &models.RequestJSON{
+		Req:     model,
+		Path:    model.Host + model.URL,
 		IsHTTPS: isHTTPS,
 	}
-	_, err := server.db.SaveRequest(req)
+	_, err = server.db.SaveRequest(modelToSave)
+
+	if err != nil {
+		log.Printf("Request wasn't saved: %s", err)
+	}
+}
+
+func (server *Server) saveRawRequest(request []byte, isHTTPS bool) {
+	model, err := request_handle.ConvertRawRequestToModel(request, isHTTPS)
+	if err != nil {
+		log.Printf("Request wasn't saved: %s", err)
+		return
+	}
+
+	modelToSave := &models.RequestJSON{
+		Req:     model,
+		Path:    model.Host + model.URL,
+		IsHTTPS: isHTTPS,
+	}
+	_, err = server.db.SaveRequest(modelToSave)
 	if err != nil {
 		log.Printf("Request wasn't saved: %s", err)
 	}

@@ -2,6 +2,7 @@ package repeater
 
 import (
 	"github.com/go-chi/chi"
+	"github.com/sergeychur/go_http_proxy/internal/models"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -43,28 +44,51 @@ func (server *Server) GetHistory(w http.ResponseWriter, r *http.Request) {
 }
 
 func (server *Server) GetRequest(w http.ResponseWriter, r *http.Request) {
+	request := server.dealGettingRequest(w, r)
+	if request != nil {
+		WriteToResponse(w, http.StatusOK, request)
+	}
+}
+
+func (server *Server) PerformRequest(w http.ResponseWriter, r *http.Request) {
+	request := models.RequestJSON{}
+	err := ReadFromBody(r, w, &request)
+	if err != nil {
+		return
+	}
+	server.MakeRequest(&request, w)
+	//WriteToResponse(w, http.StatusOK, response)
+}
+
+func (server *Server) RepeatRequest(w http.ResponseWriter, r *http.Request) {
+	request := server.dealGettingRequest(w, r)
+	if request != nil {
+		server.MakeRequest(request, w)
+		//if err != nil {
+		//	http.Error(w, err.Error(), http.StatusInternalServerError)
+		//	return
+		//}
+		//if err != nil {
+		//	log.Printf("couldn't write response: %v", err)
+		//}
+	}
+}
+
+func (server *Server) dealGettingRequest(w http.ResponseWriter, r *http.Request) *models.RequestJSON{
 	strId := chi.URLParam(r, "id")
 	id, err := strconv.Atoi(strId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return nil
 	}
 	request, err := server.db.GetRequest(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return nil
 	}
 	if request == nil {
 		http.Error(w, "Not Found", http.StatusNotFound)
-		return
+		return nil
 	}
-	WriteToResponse(w, http.StatusOK, request)
-}
-
-func (server *Server) PerformRequest(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-}
-
-func (server *Server) RepeatRequest(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
+	return request
 }

@@ -1,7 +1,10 @@
 package repeater
 
 import (
+	"crypto/tls"
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"github.com/sergeychur/go_http_proxy/internal/certificates"
 	"github.com/sergeychur/go_http_proxy/internal/config"
 	"github.com/sergeychur/go_http_proxy/internal/database"
 	"log"
@@ -13,6 +16,7 @@ type Server struct {
 	router *chi.Mux
 	db     *database.DB
 	config *config.Config
+	ca tls.Certificate
 }
 
 func NewServer(pathToConfig string) (*Server, error) {
@@ -21,8 +25,17 @@ func NewServer(pathToConfig string) (*Server, error) {
 		return nil, err
 	}
 	server := new(Server)
+
+	server.ca, err = certificates.LoadCA()
+	if err != nil {
+		return nil, err
+	}
+
+
 	server.config = newConfig
 	router := chi.NewRouter()
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
 	subRouter := chi.NewRouter()
 	subRouter.Get("/history", server.GetHistory)
 	subRouter.Get("/request/{id:^[0-9]+$}", server.GetRequest)
@@ -51,3 +64,4 @@ func (server *Server) Run() error {
 	log.Fatal(http.ListenAndServe(":"+server.config.HttpsPort, server.router))
 	return nil
 }
+

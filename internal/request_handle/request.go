@@ -15,7 +15,8 @@ const (
 )
 
 func ConvertModelToRequest(request models.Request) (*http.Request, error) { //, bool) {
-	urlStruct, err := url.Parse(request.URL)
+	urlStruct := &url.URL{}
+	err := urlStruct.UnmarshalBinary([]byte(request.URL))
 	if err != nil {
 		return nil, err //, false
 	}
@@ -62,10 +63,13 @@ func ConvertRequestToModel(r *http.Request, isHTTPS bool) (*models.Request, erro
 	if err != nil {
 		return nil, err
 	}
-
+	binUrl, err := r.URL.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
 	model := &models.Request{
 		Method:           r.Method,
-		URL:              r.URL.String(),
+		URL:              string(binUrl),
 		Proto:            r.Proto,
 		ProtoMajor:       r.ProtoMajor,
 		ProtoMinor:       r.ProtoMinor,

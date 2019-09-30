@@ -64,30 +64,26 @@
             <td>Host</td>
             <td><textarea id="host">{{.Request.Req.Host}}</textarea></td>
         </tr>
-        <!--here should be header and body-->
+        {{range $key, $value := .Request.Req.Header}}
+            <tr>
+                <td>{{$key}}</td>
+                <td>
+                    <textarea id="header_{{$key}}">{{range $i, $a := $value}}{{if gt $i 0 }}, {{end}}{{.}}{{end}}</textarea>
+                </td>
+            </tr>
+        {{end}}
         <tr>
             <td>Content Length</td>
             <td><textarea id="content_length">{{.Request.Req.ContentLength}}</textarea></td>
         </tr>
         <tr>
             <td>Transfer Encoding</td>
-            <td><textarea id="transfer_encoding">
-                    {{range .Request.Req.TransferEncoding}}
-                        {{.}},
-                    {{end}}
-                </textarea>
+            <td><textarea id="transfer_encoding">{{range $i,$a := .Request.Req.TransferEncoding}}{{if gt $i 0 }}, {{end}}{{.}}{{end}}</textarea>
             </td>
         </tr>
         <tr>
             <td>Close</td>
-            <td><textarea id="close">
-                    {{if .Request.Req.Close}}
-                        True
-                    {{else}}
-                        False
-                    {{end}}
-                </textarea>
-            </td>
+            <td><textarea id="close">{{if .Request.Req.Close}}True{{else}}False{{end}}</textarea></td>
         </tr>
         <tr>
             <td>Form</td>
@@ -98,7 +94,14 @@
             <td><textarea cols="30" rows="30" id="post_form">{{.Request.Req.PostForm}}</textarea></td>
         </tr>
         <!--here should be multpart form (or no?)-->
-        <!--trailer-->
+        {{range $key, $value := .Request.Req.Trailer}}
+            <tr>
+                <td>{{$key}}</td>
+                <td>
+                    <textarea id="trailer_{{$key}}">{{range $i, $a := $value}}{{if gt $i 0 }}, {{end}}{{.}}{{end}}</textarea>
+                </td>
+            </tr>
+        {{end}}
         <tr>
             <td>Remote Addr</td>
             <td><textarea id="remote_addr">{{.Request.Req.RemoteAddr}}</textarea></td>
@@ -114,14 +117,14 @@
     <script type="application/javascript">
         function getNewRequest() {
             let parsedHeader = {
-                // place needed things, iterate over inner maps
-            };
-            let multipartForm = {
-                // place needed things, iterate over inner maps
-{{/*                {{.Request.Req.MultipartForm}}  */}}
+                {{range $key, $value := .Request.Req.Header}}
+                    {{$key}} : document.getElementById('header_{{$key}}').value.split(', '),
+                {{end}}
             };
             let parsedTrialer = {
-               // take from request
+            {{range $key, $value := .Request.Req.Trailer}}
+                {{$key}} : document.getElementById('trailer_{{$key}}').value.split(', '),
+            {{end}}
             };
             return {
                 id: parseInt(document.getElementById('req_id').innerText),
@@ -136,7 +139,6 @@
                     host: document.getElementById('host').value,
                     header: parsedHeader,
                     body: {{.Request.Req.Body}},
-                    multipart_form: multipartForm,
                     trailer: parsedTrialer,
                     content_length: parseInt(document.getElementById('content_length').value),
                     transfer_encoding: document.getElementById('transfer_encoding').value.split(', '),

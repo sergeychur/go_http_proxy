@@ -3,12 +3,14 @@ package proxy
 import (
 	"bytes"
 	"crypto/tls"
+	"fmt"
 	"github.com/sergeychur/go_http_proxy/internal/certificates"
 	"github.com/sergeychur/go_http_proxy/internal/config"
 	"github.com/sergeychur/go_http_proxy/internal/database"
 	"github.com/sergeychur/go_http_proxy/internal/models"
 	"github.com/sergeychur/go_http_proxy/internal/request_handle"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -64,6 +66,7 @@ func (server *Server) Run() error {
 
 func (server *Server) ManageHttpRequest(w http.ResponseWriter, r *http.Request) {
 	//log.Println(r.Header)
+	fmt.Println(r.Method)
 	server.saveRequest(r, false)
 	response, err := http.DefaultTransport.RoundTrip(r)
 	if err != nil {
@@ -139,7 +142,7 @@ func (server *Server) LaunchSecureConnection(w http.ResponseWriter, r *http.Requ
 			}()
 			buf := new(bytes.Buffer)
 			multiWriter := io.MultiWriter(dst, buf)
-			_, err = io.Copy(multiWriter, src)
+			_, err = io.Copy(multiWriter, ioutil.NopCloser(src))
 			if err != nil {
 				//log.Println(err)
 				return
@@ -156,6 +159,12 @@ func (server *Server) LaunchSecureConnection(w http.ResponseWriter, r *http.Requ
 }
 
 func (server *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		err := recover()
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 	if r.Method == http.MethodConnect {
 		server.LaunchSecureConnection(w, r)
 	} else {

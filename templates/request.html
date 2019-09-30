@@ -113,8 +113,51 @@
     </button>
     <script type="application/javascript">
         function SendJSON() {
-            alert('kek');
-        }
+            let request = {
+                method: "GET",
+
+            };
+            fetch('http://localhost:8193/api/request/170', {method: 'PUT', headers:{}, body: JSON.stringify(request)}).
+            then(response => {return response}).then(
+                (data) => {
+                    const contentType = data.headers.get('Content-Type');
+                    if (contentType.substring(0, 4) === 'text') {
+                        data.text().then((text) => {
+                            document.body.innerHTML = '';
+                            document.body.innerText = text;
+                        });
+                        return;
+                    }
+                    if (contentType === 'application/json') {
+                        data.json().then((text) => {
+                            document.body.innerHTML = '';
+                            document.body.innerText = text;
+                        });
+                        return;
+                    }
+
+                    if (contentType.substring(0, 5) === 'image') {
+                        data.blob().then((blob) => {
+                            let objectURL = URL.createObjectURL(blob);
+                            document.body.innerHTML = '';
+                            let img = document.createElement('img');
+                            img.src = objectURL;
+                            document.body.appendChild(img);
+                        });
+                        return;
+                    }
+
+                    data.arrayBuffer().then((buf) => {
+                        let objectURL = URL.createObjectURL(new Blob([buf]));
+                        document.body.innerHTML = '';
+                        let url = document.createElement('a');
+                        url.href = objectURL;
+                        url.innerText = 'Download link';
+                        document.body.appendChild(url);
+                        url.click();
+                    })
+                }
+            )}
     </script>
 </body>
 </html>

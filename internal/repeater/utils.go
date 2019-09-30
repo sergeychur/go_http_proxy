@@ -28,6 +28,7 @@ func ReadFromBody(r *http.Request, w http.ResponseWriter, v interface{}) error {
 	}
 	err = json.Unmarshal(body, v)
 	if err != nil {
+		log.Println(err)
 		errText := models.Error{Message: "Cannot unmarshal json"}
 		WriteToResponse(w, http.StatusBadRequest, errText)
 		return fmt.Errorf(errText.Message)

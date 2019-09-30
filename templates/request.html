@@ -28,9 +28,9 @@
         </tr>
         </thead>
         <tr>
-            <td>{{.Request.ID}}</td>
-            <td>{{.Request.IsHTTPS}}</td>
-            <td>{{.Request.Path}}</td>
+            <td id="req_id">{{.Request.ID}}</td>
+            <td id="is_https">{{.Request.IsHTTPS}}</td>
+            <td id="req_path">{{.Request.Path}}</td>
         </tr>
     </table>
     <table  style="width: 100%">
@@ -112,12 +112,45 @@
         Send
     </button>
     <script type="application/javascript">
-        function SendJSON() {
-            let request = {
-                method: "GET",
-
+        function getNewRequest() {
+            let parsedHeader = {
+                // place needed things, iterate over inner maps
             };
-            fetch('http://localhost:8193/api/request/170', {method: 'PUT', headers:{}, body: JSON.stringify(request)}).
+            let multipartForm = {
+                // place needed things, iterate over inner maps
+{{/*                {{.Request.Req.MultipartForm}}  */}}
+            };
+            let parsedTrialer = {
+               // take from request
+            };
+            return {
+                id: parseInt(document.getElementById('req_id').innerText),
+                is_https: document.getElementById('is_https').innerText === "True",
+                path: document.getElementById('req_path').innerText,
+                request: {
+                    method: document.getElementById('method').value,
+                    path: document.getElementById('url').value,
+                    proto: document.getElementById('proto').value,
+                    proto_major: parseInt(document.getElementById('proto_major').value),
+                    proto_minor: parseInt(document.getElementById('proto_minor').value),
+                    host: document.getElementById('host').value,
+                    header: parsedHeader,
+                    body: {{.Request.Req.Body}},
+                    multipart_form: multipartForm,
+                    trailer: parsedTrialer,
+                    content_length: parseInt(document.getElementById('content_length').value),
+                    transfer_encoding: document.getElementById('transfer_encoding').value.split(', '),
+                    close: document.getElementById('close').value === 'True',
+                    form: document.getElementById('form').value,
+                    post_form: document.getElementById('post_form').value,
+                    remote_addr: document.getElementById('remote_addr').value,
+                    request_uri: document.getElementById('request_uri').value,
+            }
+        }
+        }
+        function SendJSON() {
+            let request = getNewRequest();
+            fetch('http://localhost:8193/api/request/', {method: 'POST', headers:{}, body: JSON.stringify(request)}).
             then(response => {return response}).then(
                 (data) => {
                     const contentType = data.headers.get('Content-Type');
@@ -152,7 +185,6 @@
                         document.body.innerHTML = '';
                         let url = document.createElement('a');
                         url.href = objectURL;
-                        url.innerText = 'Download link';
                         document.body.appendChild(url);
                         url.click();
                     })

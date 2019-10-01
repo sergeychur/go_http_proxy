@@ -135,10 +135,15 @@ func (server *Server) LaunchSecureConnection(w http.ResponseWriter, r *http.Requ
 	f := func(dst io.WriteCloser, src io.ReadCloser, isSaved bool) {
 		if src != nil && dst != nil {
 			defer func() {
-				_ = dst.Close()
+				if dst != nil {
+					_ = dst.Close()
+				}
+
 			}()
 			defer func() {
-				_ = src.Close()
+				if src != nil {
+					_ = src.Close()
+				}
 			}()
 			buf := new(bytes.Buffer)
 			multiWriter := io.MultiWriter(dst, buf)

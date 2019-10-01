@@ -1,0 +1,44 @@
+version: "3.2"
+
+networks:
+  uniting_net:
+
+
+services:
+  db:
+    build:
+      context: .
+      dockerfile: deploy/db.Dockerfile
+    links:
+      - repeater
+      - proxy
+    restart: always
+    expose:
+      - 5432
+    networks:
+      - uniting_net
+
+  proxy:
+    build:
+      context: .
+      dockerfile: deploy/proxy.Dockerfile
+    ports:
+      - 8192:8192
+    restart: always
+    networks:
+      - uniting_net
+    command:
+      /bin/bash -c "/home/app/wait_for_it.sh db:5432 -t 600 && /home/app/proxy /home/app/proxy_config.json"
+
+  repeater:
+    build:
+      context: .
+      dockerfile: deploy/repeater.Dockerfile
+    ports:
+      - 8193:8193
+    networks:
+      - uniting_net
+    restart: always
+    command:
+      /bin/bash -c "/home/app/wait_for_it.sh db:5432 -t 600 && /home/app/repeater /home/app/repeater_config.json"
+

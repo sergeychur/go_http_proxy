@@ -20,7 +20,7 @@ func (server *Server) MakeRequest(request *models.RequestJSON, w http.ResponseWr
 }
 
 func (server *Server) makeHTTPSRequest(request *models.RequestJSON, w http.ResponseWriter) {
-	req, err := request_handle.ConvertModelToRequest(*request.Req)
+	req, err := request_handle.ConvertModelToRequest(*request.Req, request.IsHTTPS)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -59,7 +59,7 @@ func (server *Server) makeHTTPSRequest(request *models.RequestJSON, w http.Respo
 }
 
 func (server *Server) makeHTTPRequest(request *models.RequestJSON, w http.ResponseWriter) {
-	r, err := request_handle.ConvertModelToRequest(*request.Req)
+	r, err := request_handle.ConvertModelToRequest(*request.Req, request.IsHTTPS)
 	if err != nil {
 	}
 	fmt.Println(r)

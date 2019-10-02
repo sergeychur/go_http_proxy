@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"github.com/sergeychur/go_http_proxy/internal/models"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -14,11 +15,24 @@ const (
 	MAX_MEMORY = 1 * 1024 * 1024
 )
 
-func ConvertModelToRequest(request models.Request) (*http.Request, error) { //, bool) {
+func ConvertModelToRequest(request models.Request, isHTTPS bool) (*http.Request, error) { //, bool) {
 	urlStruct := &url.URL{}
 	err := urlStruct.UnmarshalBinary([]byte(request.URL))
 	if err != nil {
+		log.Println(err)
 		return nil, err //, false
+	}
+
+	if urlStruct.Scheme == "" {
+		if isHTTPS {
+			urlStruct.Scheme = "https"
+		} else {
+			urlStruct.Scheme = "http"
+		}
+	}
+
+	if urlStruct.Host == "" {
+		urlStruct.Host = request.Host
 	}
 
 	form, err := url.ParseQuery(request.Form)
@@ -107,8 +121,8 @@ func ConvertRawRequestToModel(buf []byte, isHTTPS bool) (*models.Request, error)
 	return ConvertRequestToModel(request, isHTTPS)
 }
 
-func ConvertModelToRawRequest(request models.Request) ([]byte, error) { //, bool) {
-	req, err := ConvertModelToRequest(request)
+func ConvertModelToRawRequest(request models.Request, isHTTPS bool) ([]byte, error) { //, bool) {
+	req, err := ConvertModelToRequest(request, isHTTPS)
 	if err != nil {
 		return nil, err //, false
 	}

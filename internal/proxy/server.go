@@ -120,7 +120,7 @@ func (server *Server) LaunchSecureConnection(w http.ResponseWriter, r *http.Requ
 	}
 	_, err = conn.Write([]byte(OKHeader))
 	if err != nil {
-		log.Printf("Unable to install conn: %v", err)
+		//log.Printf("Unable to install conn: %v", err)
 		_ = conn.Close()
 		return
 	}
@@ -128,7 +128,7 @@ func (server *Server) LaunchSecureConnection(w http.ResponseWriter, r *http.Requ
 	clientConn := tls.Server(conn, curConfig)
 	err = clientConn.Handshake()
 	if err != nil {
-		log.Printf("Unable to handshake: %v", err)
+		//log.Printf("Unable to handshake: %v", err)
 		_ = clientConn.Close()
 		_ = conn.Close()
 		return

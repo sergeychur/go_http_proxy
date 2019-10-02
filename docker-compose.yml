@@ -9,9 +9,9 @@ services:
     build:
       context: .
       dockerfile: deploy/db.Dockerfile
-    links:
-      - repeater
-      - proxy
+#    links:
+#      - repeater
+#      - proxy
     restart: always
     expose:
       - 5432
@@ -27,8 +27,12 @@ services:
     restart: always
     networks:
       - uniting_net
+    depends_on:
+      - db
     command:
-      /bin/bash -c "/home/app/wait_for_it.sh db:5432 -t 600 && /home/app/proxy /home/app/proxy_config.json"
+      /bin/sh -c "go run cmd/proxy/main.go ./proxy_config.json"
+    volumes:
+      - ./:/home/app
 
   repeater:
     build:
@@ -39,6 +43,8 @@ services:
     networks:
       - uniting_net
     restart: always
+    depends_on:
+      - db
     command:
-      /bin/bash -c "/home/app/wait_for_it.sh db:5432 -t 600 && /home/app/repeater /home/app/repeater_config.json"
+      /bin/sh -c "go run ./cmd/repeater/main.go ./repeater_config.json"
 

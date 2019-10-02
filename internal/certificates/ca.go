@@ -31,9 +31,9 @@ func genCA() (cert tls.Certificate, err error) {
 		return
 	}
 	cert, _ = tls.X509KeyPair(certPEM, keyPEM)
-	err = ioutil.WriteFile(certFile, certPEM, 0400)
+	err = ioutil.WriteFile(certFile, certPEM, 0644)
 	if err == nil {
-		err = ioutil.WriteFile(keyFile, keyPEM, 0400)
+		err = ioutil.WriteFile(keyFile, keyPEM, 0644)
 	}
 	return cert, err
 }

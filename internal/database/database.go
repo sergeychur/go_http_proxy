@@ -12,8 +12,8 @@ const (
 	saveRequest   = "INSERT INTO requests(url, is_https, data) VALUES($1, $2, $3) RETURNING req_id;"
 	selectRequest = "SELECT * FROM requests WHERE req_id = $1;"
 	pageRequests  = "SELECT req.* FROM requests req " +
-		"JOIN ( SELECT req_id FROM requests req ORDER BY req_id " +
-		"LIMIT $1 OFFSET $2) sub_q ON (req.req_id = sub_q.req_id) ORDER BY req_id;"
+		"JOIN ( SELECT req_id FROM requests req ORDER BY req_id DESC " +
+		"LIMIT $1 OFFSET $2) sub_q ON (req.req_id = sub_q.req_id) ORDER BY req_id DESC;"
 )
 
 type DB struct {

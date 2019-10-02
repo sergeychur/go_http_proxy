@@ -66,3 +66,54 @@ HTTP Proxy for "Web Security" course in TP mail.ru
             
             По нажатии кнопки "Send" выполнится запрос и опять же ответ отрендерится в браузере.
             
+        * 3.2.2 Через API
+        ###GET 
+        /api/history
+        параметры в URL rows - количество запросов на страницу, page - номер страницы
+        Пример: http://localhost:8193/api/history?rows=10&page=1
+        ###GET
+        /api/request/{id}
+        параметр в пути id - номер запроса
+        получить параметры запроса в виде JSON. Практически все поля дублируют поля структуры Request из пакета net/http языка Golang. Добавлены id запроса в БД и признак HTTPS запроса
+        ###PUT
+        /api/request/{id}
+        параметр в пути id - номер запроса
+        Повторить запрос с id={id}. Возвращает ответ сервера.
+        ###POST
+        /api/request/
+        В теле запроса должен быть json установленного формата. Выполняет переданный измененный запрос и сохраняет его в БД.
+        
+        Формат JSON(на примере одного из запросов):
+        ```json
+        {
+         "id":1,
+         "is_https":false,
+         "path":"http://bigor.bmstu.ru/",
+         "request":{
+                     "method":"GET",
+                     "path":"http://bigor.bmstu.ru/",
+                     "proto":"HTTP/1.1",
+                     "proto_major":1,
+                     "proto_minor":1,
+                     "host":"bigor.bmstu.ru",
+                     "header":{
+                               "Accept":["text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"],
+                               "Accept-Encoding":["gzip","deflate"],
+                               "Accept-Language":["ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3"],
+                               "Connection":["keep-alive"],
+                               "Cookie":["_ga=GA1.2.484333667.1569884374; _gid=GA1.2.1047068605.1569884374"],
+                               "Upgrade-Insecure-Requests":["1"],
+                               "User-Agent":["Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:69.0) Gecko/20100101 Firefox/69.0"],
+                             },
+                     "body":null,
+                     "trailer":{},
+                     "content_length":0,
+                     "transfer_encoding":[""],
+                     "close":false,
+                     "form":"",
+                     "post_form":"",
+                     "remote_addr":"172.19.0.1:46140",
+                     "request_uri":"http://bigor.bmstu.ru/",
+                },
+         }
+        
